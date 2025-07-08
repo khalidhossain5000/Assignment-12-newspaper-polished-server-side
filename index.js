@@ -38,6 +38,22 @@ async function run() {
       const result=await articleCollections.insertOne(articles)
       res.send(result)
     })
+
+    // Trending API Route
+    app.get("/articles/trending", async (req, res) => {
+      try {
+        const trendingArticles = await articleCollections
+          .find() // You can change to { status: "approved" } later
+          .sort({ views: -1 })
+          .limit(6)
+          .toArray();
+
+        res.json(trendingArticles);
+      } catch (error) {
+        console.error("Error fetching trending articles:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    });
     //article(submitted by user) related api ends
 
 
@@ -49,7 +65,7 @@ async function run() {
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
