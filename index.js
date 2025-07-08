@@ -84,11 +84,16 @@ async function run() {
 
     //USER RELATED API STARTS HERE
     app.post("/users", async (req, res) => {
-      {
-        const userInfo = req.body;
-        const result = await usersCollection.insertOne(userInfo);
-        res.send(result);
+      const email = req.body.email;
+      const userExist = await usersCollection.findOne({ email });
+      if (userExist) {
+        return res
+          .status(200)
+          .send({ message: "User already exists", inserted: false });
       }
+      const userInfo = req.body;
+      const result = await usersCollection.insertOne(userInfo);
+      res.send(result);
     });
 
     app.get("/users", async (req, res) => {
@@ -100,7 +105,7 @@ async function run() {
 
     app.patch("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
-     
+
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: {
