@@ -29,6 +29,7 @@ async function run() {
     //DB AND COLLECTION STARTS
     const db = client.db("Assignment_12_DB");
     const articleCollections = db.collection("Articles");
+    const usersCollection = db.collection("users");
     //DB AND COLLECTION ENDS
 
     //article(submitted by user) related api starts (PRIVATE_API)
@@ -55,9 +56,11 @@ async function run() {
     });
     //get article details page single data
     app.get("/articles/:id", async (req, res) => {
-      const id=req.params.id
-      
-      const article = await articleCollections.findOne({ _id: new ObjectId(id) });
+      const id = req.params.id;
+
+      const article = await articleCollections.findOne({
+        _id: new ObjectId(id),
+      });
       res.send(article);
     });
 
@@ -79,6 +82,41 @@ async function run() {
 
     //article(submitted by user) related api ends
 
+    //USER RELATED API STARTS HERE
+    app.post("/users", async (req, res) => {
+      {
+        const userInfo = req.body;
+        const result = await usersCollection.insertOne(userInfo);
+        res.send(result);
+      }
+    });
+
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+
+    //APPROVE ADMIN / UPDATE USER ROLE API
+
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+     
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+
+      try {
+        const result = await usersCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).send({ message: "Server error while updating user" });
+      }
+    });
+    //USER RELATED API ENDS HERE
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
