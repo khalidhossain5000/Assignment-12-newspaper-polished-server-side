@@ -27,6 +27,23 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+    //DB AND COLLECTION STARTS
+    const db=client.db("Assignment_12_DB")
+    const articleCollections=db.collection('Articles')
+    //DB AND COLLECTION ENDS
+
+    //article(submitted by user) related api starts (PRIVATE_API)
+    app.post('/articles',async (req,res)=>{
+      const articles=req.body;
+      const result=await articleCollections.insertOne(articles)
+      res.send(result)
+    })
+    //article(submitted by user) related api ends
+
+
+
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
