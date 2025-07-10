@@ -123,6 +123,8 @@ async function run() {
       }
     });
     //USER RELATED API ENDS HERE
+    // ------------------------------------------------------  //
+    //PUBLISHER RALTED API STARTS
     app.post("/publishers", async (req, res) => {
 
       try {
@@ -152,9 +154,15 @@ async function run() {
         res.status(500).json({ error: "Internal Server Error" });
       }
     });
-    //PUBLISHER RALTED API STARTS
-    app.post;
+
+    app.get('/publishers',async(req,res)=>{
+      const result=publishersCollection.find().toArray()
+      res.send(result)
+      
+    })
+    
     //PUBLISHER RALTED API ENDS
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
