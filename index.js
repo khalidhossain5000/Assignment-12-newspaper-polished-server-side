@@ -30,6 +30,7 @@ async function run() {
     const db = client.db("Assignment_12_DB");
     const articleCollections = db.collection("Articles");
     const usersCollection = db.collection("users");
+    const publishersCollection = db.collection("Publishers");
     //DB AND COLLECTION ENDS
 
     //article(submitted by user) related api starts (PRIVATE_API)
@@ -122,6 +123,38 @@ async function run() {
       }
     });
     //USER RELATED API ENDS HERE
+    app.post("/publishers", async (req, res) => {
+
+      try {
+        const { publisherName, publisherPic } = req.body;
+
+        // Simple validation for name and logo
+        if (!publisherName || !publisherPic) {
+          return res.status(400).json({ error: "Name and logo are required" });
+        }
+
+        // publisher data here
+        const publisherData = {
+          publisherName,
+          publisherPic,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Insert into DB
+        const result = await publishersCollection.insertOne(publisherData);
+
+        res.status(201).json({
+          message: "Publisher added successfully",
+          publisherId: result.insertedId,
+        });
+      } catch (error) {
+        console.error("Failed to add publisher:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
+    });
+    //PUBLISHER RALTED API STARTS
+    app.post;
+    //PUBLISHER RALTED API ENDS
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
