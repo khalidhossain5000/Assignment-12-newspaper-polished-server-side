@@ -40,7 +40,58 @@ async function run() {
       const result = await articleCollections.insertOne(articles);
       res.send(result);
     });
+    //UPDATING STATUS API VIA ADMIN ACTIONS BUTTON
+    app.patch("/articles/:id", async (req, res) => {
+      const articleId = req.params.id;
 
+      // ✅ NEW: Accepting declineReason from frontend
+      const { status, declineReason } = req.body;
+
+      // ✅ SAME: Still validates 'status'
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+
+      // ✅ NEW: Dynamic update object
+      const updateDoc = { status };
+
+      // ✅ NEW: If status is "declined", also set declineReason
+      if (status === "declined" && declineReason) {
+        updateDoc.declineReason = declineReason;
+      }
+
+      // ✅ SAME: Update article using dynamic updateDoc
+      const result = await articleCollections.updateOne(
+        { _id: new ObjectId(articleId) },
+        { $set: updateDoc }
+      );
+
+      res.send(result);
+    });
+
+    //GETTING APPROVE ARTICLE WITH SEARCH FILTER
+    app.get("/articles/approved", async (req, res) => {
+      const search = req.query.search || "";
+      const publisher = req.query.publisher || "";
+      const tag = req.query.tag || "";
+
+      const query = {
+        status: "approved",
+        articleTitle: { $regex: search, $options: "i" }, // for search
+      };
+
+      if (publisher) query["publisher.name"] = publisher;
+      if (tag) query.tags = tag;
+
+      const articles = await articleCollections.find(query).toArray();
+      res.send(articles);
+    });
+
+    //ADMIN API GETTING ALL ARTICLE
+    app.get("/articles", async (req, res) => {
+      const result = await articleCollections.find().toArray();
+      res.send(result);
+    });
     // Trending API Route
     app.get("/articles/trending", async (req, res) => {
       try {
@@ -123,6 +174,20 @@ async function run() {
         res.status(500).send({ message: "Server error while updating user" });
       }
     });
+
+    //premium field update api
+    app.patch("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const { premiumInfo } = req.body;
+
+      const filter = { email };
+      const updateDoc = {
+        $set: { premiumInfo },
+      };
+
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
     //USER RELATED API ENDS HERE
     // ------------------------------------------------------  //
     //PUBLISHER RALTED API STARTS
@@ -165,9 +230,9 @@ async function run() {
     //PAYMENT REALTED API START HERE
     app.post("/create-payment-intent", async (req, res) => {
       try {
-        const  amount = req.body?.amountInCents; // amount in cents from frontend
+        const amount = req.body?.amountInCents; // amount in cents from frontend
 
-        console.log("this is",amount);
+        console.log("this is", amount);
         if (!amount || amount <= 0) {
           return res.status(400).json({ error: "Invalid amount" });
         }
