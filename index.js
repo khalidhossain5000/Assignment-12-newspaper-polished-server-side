@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-
+const admin = require("firebase-admin");
 const app = express();
 dotenv.config();
 const port = process.env.PORT || 3000;
@@ -11,6 +11,12 @@ const stripe = require("stripe")(process.env.STRIPE_KEY);
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+const serviceAccount = require("./assignment-12-firebase-admin-key.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.r4vhlna.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -33,12 +39,47 @@ async function run() {
     const usersCollection = db.collection("users");
     const publishersCollection = db.collection("Publishers");
     //DB AND COLLECTION ENDS
+    //CUSTOM MIDDLEWARES STARTS
+    const verifyFBToken = async (req, res, next) => {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+      const token = authHeader.split(" ")[1];
 
+      if (!token)
+        return res.status(401).send({ message: "unauthorized access" });
+      //VERIFY TOKEN STARTS
+      try {
+        const decoded = await admin.auth().verifyIdToken(token);
+        req.decoded = decoded;
+        next();
+      } catch (error) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+    };
+    //CUSTOM MIDDLEWARES ENDS
     //article(submitted by user) related api starts (PRIVATE_API)
-    app.post("/articles", async (req, res) => {
+    app.post("/articles",verifyFBToken, async (req, res) => {
       const articles = req.body;
       const result = await articleCollections.insertOne(articles);
       res.send(result);
+    });
+
+    //ARTICLE VIEW COUNT-->
+    app.patch("/articles/view/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await articleCollections.updateOne(
+          { _id: new ObjectId(id) },
+          { $inc: { views: 1 } }
+        );
+        if (result.modifiedCount === 0)
+          return res.status(404).json({ error: "Article not found" });
+        res.json({ message: "View count incremented" });
+      } catch (err) {
+        res.status(500).json({ error: "Failed to update views" });
+      }
     });
     //UPDATING STATUS API VIA ADMIN ACTIONS BUTTON
     app.patch("/articles/:id", async (req, res) => {
@@ -92,6 +133,23 @@ async function run() {
       const result = await articleCollections.find().toArray();
       res.send(result);
     });
+    //GET PREMIUM ARTICLE
+
+    app.get("/articles/premium", async (req, res) => {
+      try {
+        // Step 1: Query to filter only premium articles
+        const query = { isPremium: true, status: "approved" }; // শুধুমাত্র approved এবং premium
+
+        // Step 2: Find articles matching query
+        const premiumArticles = await articleCollections.find(query).toArray();
+
+        // Step 3: Send the articles back to frontend
+        res.status(200).json(premiumArticles);
+      } catch (error) {
+        console.error("Failed to fetch premium articles:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
+    });
     // Trending API Route
     app.get("/articles/trending", async (req, res) => {
       try {
@@ -109,8 +167,8 @@ async function run() {
     });
     //get article details page single data
     app.get("/articles/:id", async (req, res) => {
-      const id = req.params.id;
-
+      const id = req?.params?.id;
+      console.log("object,id", id);
       const article = await articleCollections.findOne({
         _id: new ObjectId(id),
       });
@@ -132,6 +190,18 @@ async function run() {
         res.status(500).json({ error: "Failed to update views" });
       }
     });
+    // Make article premium
+    app.patch("/articles/:id/premium", async (req, res) => {
+      const articleId = req.params.id;
+
+      const result = await articleCollections.updateOne(
+        { _id: new ObjectId(articleId) },
+        { $set: { isPremium: true } }
+      );
+
+      res.send(result);
+    });
+
     //ARTICEL DELTE API
     app.delete("/articles/:id", async (req, res) => {
       const id = req.params.id;
