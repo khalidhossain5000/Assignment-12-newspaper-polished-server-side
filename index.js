@@ -132,6 +132,14 @@ async function run() {
         res.status(500).json({ error: "Failed to update views" });
       }
     });
+    //ARTICEL DELTE API
+    app.delete("/articles/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await articleCollections.deleteOne({
+        _id: new ObjectId(id),
+      });
+      res.send(result);
+    });
 
     //article(submitted by user) related api ends
 
