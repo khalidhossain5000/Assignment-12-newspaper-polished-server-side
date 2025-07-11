@@ -6,6 +6,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 dotenv.config();
 const port = process.env.PORT || 3000;
+const stripe = require("stripe")(process.env.STRIPE_KEY);
 
 // Middleware
 app.use(cors());
@@ -126,7 +127,6 @@ async function run() {
     // ------------------------------------------------------  //
     //PUBLISHER RALTED API STARTS
     app.post("/publishers", async (req, res) => {
-
       try {
         const { publisherName, publisherPic } = req.body;
 
@@ -155,13 +155,39 @@ async function run() {
       }
     });
 
-    app.get('/publishers',async(req,res)=>{
-      const result=publishersCollection.find().toArray()
-      res.send(result)
-      
-    })
-    
-    //PUBLISHER RALTED API ENDS
+    app.get("/publishers", async (req, res) => {
+      const result = await publishersCollection.find().toArray();
+      res.send(result);
+    });
+
+    //OUBLISHER RALTED API ENDS
+
+    //PAYMENT REALTED API START HERE
+    app.post("/create-payment-intent", async (req, res) => {
+      try {
+        const  amount = req.body?.amountInCents; // amount in cents from frontend
+
+        console.log("this is",amount);
+        if (!amount || amount <= 0) {
+          return res.status(400).json({ error: "Invalid amount" });
+        }
+
+        // Create a PaymentIntent with the amount and currency
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount,
+          currency: "usd", // or your desired currency
+          payment_method_types: ["card"],
+        });
+
+        // Send client secret to frontend
+        res.json({ clientSecret: paymentIntent.client_secret });
+      } catch (error) {
+        console.error("Error creating payment intent:", error);
+        res.status(500).json({ error: "Failed to create payment intent" });
+      }
+    });
+
+    //PAYMENT REALTED API ENDS HERE
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
