@@ -123,7 +123,7 @@ async function run() {
     app.patch("/articles/update/:id", async (req, res) => {
       try {
         const articleId = req.params.id;
-        const updateData = req.body; // { title: "...", content: "...", ... }
+        const updateData = req.body;
 
         if (!ObjectId.isValid(articleId)) {
           return res.status(400).json({ error: "Invalid article ID" });
@@ -289,6 +289,30 @@ async function run() {
       const userInfo = req.body;
       const result = await usersCollection.insertOne(userInfo);
       res.send(result);
+    });
+
+    // /api/user-stats
+    app.get("/user-stats", async (req, res) => {
+      try {
+        const today = new Date();
+
+        const totalUsers = await usersCollection.estimatedDocumentCount(); // all users
+        const normalUsers = await usersCollection.countDocuments({
+          premiumInfo: null,
+        }); // no premium
+        // const premiumUsers = await usersCollection.countDocuments({
+        //   premiumInfo: { $ne: null, $gt: today }, // has premium and not expired
+        // });
+
+        const premiumUsers = await usersCollection.countDocuments({
+          premiumInfo: { $ne: null },
+          $expr: { $gt: [{ $toDate: "$premiumInfo" }, today] },
+        });
+
+        res.send({ totalUsers, normalUsers, premiumUsers });
+      } catch (error) {
+        res.status(500).send({ error: "Something went wrong" });
+      }
     });
 
     app.get("/users", async (req, res) => {
