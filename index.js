@@ -53,6 +53,16 @@ async function run() {
       try {
         const decoded = await admin.auth().verifyIdToken(token);
         req.decoded = decoded;
+        // ✅ Now check premium expiry
+        const user = await usersCollection.findOne({ email: decoded.email });
+        if (user?.premiumInfo && new Date(user.premiumInfo) < new Date()) {
+          // ✅ Expired
+          await usersCollection.updateOne(
+            { email: decoded.email },
+            { $set: { premiumInfo: null } }
+          );
+        }
+        console.log("req.deconde", req.decoded, "user", user);
         next();
       } catch (error) {
         return res.status(403).send({ message: "forbidden access" });
@@ -60,7 +70,7 @@ async function run() {
     };
     //CUSTOM MIDDLEWARES ENDS
     //article(submitted by user) related api starts (PRIVATE_API)
-    app.post("/articles",verifyFBToken, async (req, res) => {
+    app.post("/articles", verifyFBToken, async (req, res) => {
       const articles = req.body;
       const result = await articleCollections.insertOne(articles);
       res.send(result);
@@ -114,28 +124,33 @@ async function run() {
     app.get("/articles/approved", async (req, res) => {
       const search = req.query.search || "";
       const publisher = req.query.publisher || "";
-      const tag = req.query.tag || "";
+      // const tag = req.query.tag || "";
+      const tags = req.query.tags ? req.query.tags.split(",") : [];
 
       const query = {
         status: "approved",
         articleTitle: { $regex: search, $options: "i" }, // for search
       };
-
-      if (publisher) query["publisher.name"] = publisher;
-      if (tag) query.tags = tag;
+      console.log("pub,tag,filt",publisher,"tags",tags,query);
+      if (publisher) {
+        query["publisher.value"] = publisher; // publisher.value দিয়ে filter
+      }
+      if (tags.length) {
+        query["tags.value"] = { $in: tags }; // tags array এর ভিতরের object এর value দিয়ে match করবে
+      }
 
       const articles = await articleCollections.find(query).toArray();
       res.send(articles);
     });
 
     //ADMIN API GETTING ALL ARTICLE
-    app.get("/articles", async (req, res) => {
+    app.get("/articles", verifyFBToken, async (req, res) => {
       const result = await articleCollections.find().toArray();
       res.send(result);
     });
     //GET PREMIUM ARTICLE
 
-    app.get("/articles/premium", async (req, res) => {
+    app.get("/articles/premium", verifyFBToken, async (req, res) => {
       try {
         // Step 1: Query to filter only premium articles
         const query = { isPremium: true, status: "approved" }; // শুধুমাত্র approved এবং premium
