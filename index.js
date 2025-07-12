@@ -131,7 +131,7 @@ async function run() {
         status: "approved",
         articleTitle: { $regex: search, $options: "i" }, // for search
       };
-      console.log("pub,tag,filt",publisher,"tags",tags,query);
+
       if (publisher) {
         query["publisher.value"] = publisher; // publisher.value দিয়ে filter
       }
@@ -246,7 +246,24 @@ async function run() {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
+    app.get("/user", async (req, res) => {
+      const email = req.query.email; // ইউজারের ইমেইল ইউআরএল থেকে নেবে, যেমন /api/user?email=test@example.com
 
+      if (!email) {
+        return res.status(400).send({ error: "Email is required" });
+      }
+
+      try {
+        const user = await usersCollection.findOne({ email: email });
+        if (!user) {
+          return res.status(404).send({ error: "User not found" });
+        }
+        res.send(user);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: "Server error" });
+      }
+    });
     //APPROVE ADMIN / UPDATE USER ROLE API
 
     app.patch("/users/admin/:id", async (req, res) => {
