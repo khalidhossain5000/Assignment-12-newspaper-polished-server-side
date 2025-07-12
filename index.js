@@ -264,6 +264,35 @@ async function run() {
         res.status(500).send({ error: "Server error" });
       }
     });
+
+    //updating user INFO IN THE DB FROM UPDATE PROFILE PAGE
+    app.patch("/users", async (req, res) => {
+      try {
+        const email = req.query.email; // query থেকে email নেওয়া
+        const { name, profilePic } = req.body;
+
+        if (!email) {
+          return res
+            .status(400)
+            .json({ error: "Email query parameter is required" });
+        }
+
+        const result = await usersCollection.updateOne(
+          { email },
+          { $set: { name, profilePic } }
+        );
+
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        res.json({ message: "User profile updated successfully" });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Server error" });
+      }
+    });
+
     //APPROVE ADMIN / UPDATE USER ROLE API
 
     app.patch("/users/admin/:id", async (req, res) => {
