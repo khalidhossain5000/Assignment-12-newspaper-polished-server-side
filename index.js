@@ -146,9 +146,29 @@ async function run() {
     });
 
     //update my article api ends here
-    //GETTING APPROVE ARTICLE WITH SEARCH FILTER
-    //MY ARTICLE API START HERE
+    //PUBLISHER ARTICLE COUNT API
+    app.get("/publisher-article-count", async (req, res) => {
+      try {
+        const result = await articleCollections
+          .aggregate([
+            {
+              $group: {
+                _id: "$publisher.label", // 🔥 Group by label for readable pie chart
+                count: { $sum: 1 },
+              },
+            },
+          ])
+          .toArray();
+
+        res.send(result); // Example: [ { _id: "Business", count: 5 }, ... ]
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ error: "Server error" });
+      }
+    });
+
     // GET /api/articles?email=test@admin.com
+
     app.get("/articles/my-articles", async (req, res) => {
       try {
         const email = req.query.email;
@@ -193,10 +213,30 @@ async function run() {
     });
 
     //ADMIN API GETTING ALL ARTICLE
+    // app.get("/articles", verifyFBToken, async (req, res) => {
+    //   const result = await articleCollections.find().toArray();
+    //   res.send(result);
+    // });
+
     app.get("/articles", verifyFBToken, async (req, res) => {
-      const result = await articleCollections.find().toArray();
-      res.send(result);
-    });
+  try {
+    const page = parseInt(req.query.page) || 0;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = page * limit;
+
+    const articles = await articleCollections.find()
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    const total = await articleCollections.estimatedDocumentCount();
+
+    res.send({ total, articles });
+  } catch (error) {
+    res.status(500).send({ error: "Something went wrong" });
+  }
+});
+
     //GET PREMIUM ARTICLE
 
     app.get("/articles/premium", verifyFBToken, async (req, res) => {
@@ -315,10 +355,33 @@ async function run() {
       }
     });
 
+    // app.get("/users", async (req, res) => {
+    //   const result = await usersCollection.find().toArray();
+    //   res.send(result);
+    // });
+    // GET USERS DATA WITH PAGINATION ADDED
     app.get("/users", async (req, res) => {
-      const result = await usersCollection.find().toArray();
-      res.send(result);
+      try {
+        const page = parseInt(req.query.page) || 0; // 0-indexed page
+        const limit = parseInt(req.query.limit) || 10; // limit per page
+
+        const skip = page * limit;
+
+        const users = await usersCollection
+          .find()
+          .skip(skip)
+          .limit(limit)
+          .toArray();
+
+        const total = await usersCollection.estimatedDocumentCount();
+
+        res.send({ total, users });
+      } catch (error) {
+        res.status(500).send({ error: "Something went wrong" });
+      }
     });
+
+    // GET USERS DATA WITH PAGINATION ADDED ENDS
     app.get("/user", async (req, res) => {
       const email = req.query.email; // ইউজারের ইমেইল ইউআরএল থেকে নেবে, যেমন /api/user?email=test@example.com
 
