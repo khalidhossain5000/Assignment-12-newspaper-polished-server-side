@@ -53,16 +53,16 @@ async function run() {
       try {
         const decoded = await admin.auth().verifyIdToken(token);
         req.decoded = decoded;
-        // ✅ Now check premium expiry
+        // Now check premium expiry
         const user = await usersCollection.findOne({ email: decoded.email });
         if (user?.premiumInfo && new Date(user.premiumInfo) < new Date()) {
-          // ✅ Expired
+          //  Expired
           await usersCollection.updateOne(
             { email: decoded.email },
             { $set: { premiumInfo: null } }
           );
         }
-        console.log("req.deconde", req.decoded, "user", user);
+
         next();
       } catch (error) {
         return res.status(403).send({ message: "forbidden access" });
@@ -119,8 +119,57 @@ async function run() {
 
       res.send(result);
     });
+    //update my article api start here
+    app.patch("/articles/update/:id", async (req, res) => {
+      try {
+        const articleId = req.params.id;
+        const updateData = req.body; // { title: "...", content: "...", ... }
 
+        if (!ObjectId.isValid(articleId)) {
+          return res.status(400).json({ error: "Invalid article ID" });
+        }
+
+        const result = await articleCollections.updateOne(
+          { _id: new ObjectId(articleId) },
+          { $set: updateData }
+        );
+
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ error: "Article not found" });
+        }
+
+        res.json({ message: "Article updated successfully" });
+      } catch (error) {
+        console.error("Update article error:", error);
+        res.status(500).json({ error: "Server error" });
+      }
+    });
+
+    //update my article api ends here
     //GETTING APPROVE ARTICLE WITH SEARCH FILTER
+    //MY ARTICLE API START HERE
+    // GET /api/articles?email=test@admin.com
+    app.get("/articles/my-articles", async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) {
+          return res
+            .status(400)
+            .json({ error: "Email query parameter is required" });
+        }
+
+        const articles = await articleCollections
+          .find({ authorEmail: email })
+          .toArray();
+
+        res.json(articles);
+      } catch (error) {
+        console.error("Failed to fetch articles:", error);
+        res.status(500).json({ error: "Server error" });
+      }
+    });
+
+    //MY ARTICLE API ENDS HERE
     app.get("/articles/approved", async (req, res) => {
       const search = req.query.search || "";
       const publisher = req.query.publisher || "";
