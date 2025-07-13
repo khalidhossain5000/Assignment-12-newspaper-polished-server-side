@@ -219,23 +219,24 @@ async function run() {
     // });
 
     app.get("/articles", verifyFBToken, async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 0;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = page * limit;
+      try {
+        const page = parseInt(req.query.page) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = page * limit;
 
-    const articles = await articleCollections.find()
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+        const articles = await articleCollections
+          .find()
+          .skip(skip)
+          .limit(limit)
+          .toArray();
 
-    const total = await articleCollections.estimatedDocumentCount();
+        const total = await articleCollections.estimatedDocumentCount();
 
-    res.send({ total, articles });
-  } catch (error) {
-    res.status(500).send({ error: "Something went wrong" });
-  }
-});
+        res.send({ total, articles });
+      } catch (error) {
+        res.status(500).send({ error: "Something went wrong" });
+      }
+    });
 
     //GET PREMIUM ARTICLE
 
@@ -267,6 +268,50 @@ async function run() {
       } catch (error) {
         console.error("Error fetching trending articles:", error);
         res.status(500).json({ message: "Internal server error" });
+      }
+    });
+
+    //GET EXLUSIVE ARTICLES
+    // GET /articles/exclusive
+    // app.get("/articles/exclusive", async (req, res) => {
+    //   try {
+    //     const exclusiveArticles = await articleCollections
+    //       .find({ isExclusive: true })
+    //       .sort({ createdAt: 1 }) // newest first (optional)
+    //       .limit(10) // show top 10 only
+    //       .toArray();
+
+    //     res.send(exclusiveArticles);
+    //   } catch (error) {
+    //     res.status(500).send({ error: "Failed to fetch exclusive articles" });
+    //   }
+    // });
+    app.get("/articles/exclusive", async (req, res) => {
+      try {
+        const exclusiveArticles = await articleCollections
+          .find({ isExclusive: true })
+          .limit(10) // Show top 10 only
+          .toArray();
+
+        res.send(exclusiveArticles);
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch exclusive articles" });
+      }
+    });
+
+    //GET LATEST NEWS API
+    // 📌 GET /articles/latest
+    app.get("/articles/latest", async (req, res) => {
+      try {
+        const latestArticles = await articleCollections
+          .find({ status: "approved" }) // only approved articles
+          .sort({ createdAt: -1 }) // latest first
+          .limit(6) // limit to top 10 latest
+          .toArray();
+
+        res.send(latestArticles);
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch latest news" });
       }
     });
     //get article details page single data
