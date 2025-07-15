@@ -73,7 +73,9 @@ async function run() {
 
     //admin check middleware
     const verifyAdmin = async (req, res, next) => {
-      const email = req.decoded.email;
+      // const email = req.decoded.email;
+      const email = req.user?.email; // ✅ ঠিক source থেকে নিচ্ছো
+      console.log(email);
       const query = { email };
       const user = await usersCollection.findOne(query);
       if (!user || user.role !== "admin") {
@@ -82,6 +84,7 @@ async function run() {
       next();
     };
     //CUSTOM MIDDLEWARES ENDS
+
     // article(submitted by user) related api starts (PRIVATE_API)
 
     // app.post("/articles", verifyFBToken, async (req, res) => {
@@ -130,7 +133,7 @@ async function run() {
     //ADD ARTICLE NORMAL AND PREMIUM VALIDATION IS ADDED ENDS
 
     //ARTICLE VIEW COUNT-->
-    app.patch("/articles/view/:id", async (req, res) => {
+    app.patch("/articles/view/:id",verifyFBToken, async (req, res) => {
       try {
         const id = req.params.id;
         const result = await articleCollections.updateOne(
@@ -145,7 +148,7 @@ async function run() {
       }
     });
     //UPDATING STATUS API VIA ADMIN ACTIONS BUTTON
-    app.patch("/articles/:id", async (req, res) => {
+    app.patch("/articles/:id",verifyFBToken,verifyAdmin, async (req, res) => {
       const articleId = req.params.id;
 
       // NEW: Accepting declineReason from frontend
@@ -173,7 +176,7 @@ async function run() {
       res.send(result);
     });
     //update my article api start here
-    app.patch("/articles/update/:id", async (req, res) => {
+    app.patch("/articles/update/:id",verifyFBToken, async (req, res) => {
       try {
         const articleId = req.params.id;
         const updateData = req.body;
@@ -200,7 +203,7 @@ async function run() {
 
     //update my article api ends here
     //PUBLISHER ARTICLE COUNT API
-    app.get("/publisher-article-count", async (req, res) => {
+    app.get("/publisher-article-count",verifyFBToken,verifyAdmin, async (req, res) => {
       try {
         const result = await articleCollections
           .aggregate([
@@ -222,7 +225,7 @@ async function run() {
 
     // GET /api/articles?email=test@admin.com
 
-    app.get("/articles/my-articles", async (req, res) => {
+    app.get("/articles/my-articles",verifyFBToken, async (req, res) => {
       try {
         const email = req.query.email;
         if (!email) {
@@ -272,7 +275,7 @@ async function run() {
     //   res.send(result);
     // });
 
-    app.get("/articles", async (req, res) => {
+    app.get("/articles",verifyFBToken,verifyAdmin, async (req, res) => {
       try {
         const page = parseInt(req.query.page) || 0;
         const limit = parseInt(req.query.limit) || 10;
@@ -309,7 +312,7 @@ async function run() {
         res.status(500).json({ error: "Internal Server Error" });
       }
     });
-    // Trending API Route
+    // Trending API Route(public)
     app.get("/articles/trending", async (req, res) => {
       try {
         const trendingArticles = await articleCollections
@@ -340,6 +343,7 @@ async function run() {
     //     res.status(500).send({ error: "Failed to fetch exclusive articles" });
     //   }
     // });
+    //public api
     app.get("/articles/exclusive", async (req, res) => {
       try {
         const exclusiveArticles = await articleCollections
@@ -354,7 +358,7 @@ async function run() {
     });
 
     //GET LATEST NEWS API
-    // 📌 GET /articles/latest
+    //  GET /articles/latest (public api)
     app.get("/articles/latest", async (req, res) => {
       try {
         const latestArticles = await articleCollections
@@ -369,7 +373,7 @@ async function run() {
       }
     });
     //get article details page single data
-    app.get("/articles/:id", async (req, res) => {
+    app.get("/articles/:id",verifyFBToken, async (req, res) => {
       const id = req?.params?.id;
 
       const article = await articleCollections.findOne({
@@ -379,23 +383,23 @@ async function run() {
     });
 
     //ARTICLE VIEW COUNT-->
-    app.patch("/articles/:id", async (req, res) => {
-      try {
-        const id = req.params.id;
-        console.log("this is form 2nd view api", id);
-        const result = await articleCollections.updateOne(
-          { _id: new ObjectId(id) },
-          { $inc: { views: 1 } }
-        );
-        if (result.modifiedCount === 0)
-          return res.status(404).json({ error: "Article not found" });
-        res.json({ message: "View count incremented" });
-      } catch (err) {
-        res.status(500).json({ error: "Failed to update views" });
-      }
-    });
+    // app.patch("/articles/:id", async (req, res) => {
+    //   try {
+    //     const id = req.params.id;
+    //     console.log("this is form 2nd view api", id);
+    //     const result = await articleCollections.updateOne(
+    //       { _id: new ObjectId(id) },
+    //       { $inc: { views: 1 } }
+    //     );
+    //     if (result.modifiedCount === 0)
+    //       return res.status(404).json({ error: "Article not found" });
+    //     res.json({ message: "View count incremented" });
+    //   } catch (err) {
+    //     res.status(500).json({ error: "Failed to update views" });
+    //   }
+    // });
     // Make article premium
-    app.patch("/articles/:id/premium", async (req, res) => {
+    app.patch("/articles/:id/premium",verifyFBToken,verifyAdmin, async (req, res) => {
       const articleId = req.params.id;
 
       const result = await articleCollections.updateOne(
@@ -407,7 +411,7 @@ async function run() {
     });
 
     //ARTICEL DELTE API
-    app.delete("/articles/:id", async (req, res) => {
+    app.delete("/articles/:id",verifyFBToken, async (req, res) => {
       const id = req.params.id;
       const result = await articleCollections.deleteOne({
         _id: new ObjectId(id),
@@ -418,7 +422,7 @@ async function run() {
     //article(submitted by user) related api ends
 
     //USER RELATED API STARTS HERE
-    app.post("/users", async (req, res) => {
+    app.post("/users",verifyFBToken,verifyAdmin, async (req, res) => {
       const email = req.body.email;
       const userExist = await usersCollection.findOne({ email });
       if (userExist) {
@@ -431,7 +435,7 @@ async function run() {
       res.send(result);
     });
 
-    // /api/user-stats
+    // /api/user-stats(public api)
     app.get("/user-stats", async (req, res) => {
       try {
         const today = new Date();
@@ -460,7 +464,7 @@ async function run() {
     //   res.send(result);
     // });
     // GET USERS DATA WITH PAGINATION ADDED
-    app.get("/users", async (req, res) => {
+    app.get("/users",verifyFBToken,verifyAdmin, async (req, res) => {
       try {
         const page = parseInt(req.query.page) || 0; // 0-indexed page
         const limit = parseInt(req.query.limit) || 10; // limit per page
@@ -482,7 +486,7 @@ async function run() {
     });
 
     // GET USERS DATA WITH PAGINATION ADDED ENDS
-    app.get("/user", async (req, res) => {
+    app.get("/user",verifyFBToken, async (req, res) => {
       const email = req.query.email; // ইউজারের ইমেইল ইউআরএল থেকে নেবে, যেমন /api/user?email=test@example.com
 
       if (!email) {
@@ -525,7 +529,7 @@ async function run() {
     });
     //GET USER ROLE API ENDS
     //updating user INFO IN THE DB FROM UPDATE PROFILE PAGE
-    app.patch("/users", async (req, res) => {
+    app.patch("/users",verifyFBToken, async (req, res) => {
       try {
         const email = req.query.email; // query থেকে email নেওয়া
         const { name, profilePic } = req.body;
@@ -554,7 +558,7 @@ async function run() {
 
     //APPROVE ADMIN / UPDATE USER ROLE API
 
-    app.patch("/users/admin/:id", async (req, res) => {
+    app.patch("/users/admin/:id",verifyFBToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
 
       const filter = { _id: new ObjectId(id) };
@@ -574,7 +578,7 @@ async function run() {
     });
 
     //premium field update api
-    app.patch("/users/:email", async (req, res) => {
+    app.patch("/users/:email",verifyFBToken, async (req, res) => {
       const email = req.params.email;
       const { premiumInfo } = req.body;
 
@@ -589,7 +593,7 @@ async function run() {
     //USER RELATED API ENDS HERE
     // ------------------------------------------------------  //
     //PUBLISHER RALTED API STARTS
-    app.post("/publishers", async (req, res) => {
+    app.post("/publishers",verifyFBToken,verifyAdmin, async (req, res) => {
       try {
         const { publisherName, publisherPic } = req.body;
 
@@ -626,7 +630,7 @@ async function run() {
     //OUBLISHER RALTED API ENDS
 
     //PAYMENT REALTED API START HERE
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/create-payment-intent",verifyFBToken, async (req, res) => {
       try {
         const amount = req.body?.amountInCents; // amount in cents from frontend
 
@@ -649,7 +653,7 @@ async function run() {
       }
     });
     //SAVING PAYMENT DATA TO THE DB
-    app.post("/payments", async (req, res) => {
+    app.post("/payments",verifyFBToken, async (req, res) => {
       const payment = req.body;
 
       try {
