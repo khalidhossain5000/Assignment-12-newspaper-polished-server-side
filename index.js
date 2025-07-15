@@ -53,7 +53,8 @@ async function run() {
       //VERIFY TOKEN STARTS
       try {
         const decoded = await admin.auth().verifyIdToken(token);
-        req.decoded = decoded;
+        // req.decoded = decoded;
+        req.user = decoded; // ✅ এইটা করলে তোমার API-র কোড ঠিকমতো কাজ করবে
         // Now check premium expiry
         const user = await usersCollection.findOne({ email: decoded.email });
         if (user?.premiumInfo && new Date(user.premiumInfo) < new Date()) {
@@ -69,7 +70,7 @@ async function run() {
         return res.status(403).send({ message: "forbidden access" });
       }
     };
- 
+
     //admin check middleware
     const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
@@ -81,12 +82,52 @@ async function run() {
       next();
     };
     //CUSTOM MIDDLEWARES ENDS
-    //article(submitted by user) related api starts (PRIVATE_API)
+    // article(submitted by user) related api starts (PRIVATE_API)
+
+    // app.post("/articles", verifyFBToken, async (req, res) => {
+    //   const articles = req.body;
+    //   const result = await articleCollections.insertOne(articles);
+    //   res.send(result);
+    // });
+
+    //ADD ARTICLE NORMAL AND PREMIUM VALIDATION IS ADDED
     app.post("/articles", verifyFBToken, async (req, res) => {
-      const articles = req.body;
-      const result = await articleCollections.insertOne(articles);
-      res.send(result);
+      try {
+        const userEmail = req.user.email;
+        console.log("cheking user email in articles",userEmail);
+        // Step 1: Find user in DB
+        const user = await usersCollection.findOne({ email: userEmail });
+        if (!user) {
+          return res.status(403).send({ message: "User not found" });
+        }
+
+        // Step 2: Check if premium is valid
+        const isPremium =
+          user.premiumInfo && new Date(user.premiumInfo) > new Date();
+
+        // Step 3: If not premium, check if already posted
+        if (!isPremium) {
+          const existing = await articleCollections.findOne({
+            email: userEmail,
+          });
+          if (existing) {
+            return res
+              .status(403)
+              .send({ message: "Normal users can only post one article" });
+          }
+        }
+
+        // Step 4: Allow post
+        const articles = req.body;
+        const result = await articleCollections.insertOne(articles);
+        res.send(result);
+      } catch (error) {
+        console.error("Error posting article:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
     });
+
+    //ADD ARTICLE NORMAL AND PREMIUM VALIDATION IS ADDED ENDS
 
     //ARTICLE VIEW COUNT-->
     app.patch("/articles/view/:id", async (req, res) => {
@@ -107,18 +148,18 @@ async function run() {
     app.patch("/articles/:id", async (req, res) => {
       const articleId = req.params.id;
 
-      // ✅ NEW: Accepting declineReason from frontend
+      // NEW: Accepting declineReason from frontend
       const { status, declineReason } = req.body;
 
-      // ✅ SAME: Still validates 'status'
+      // SAME: Still validates 'status'
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
       }
 
-      // ✅ NEW: Dynamic update object
+      // NEW: Dynamic update object
       const updateDoc = { status };
 
-      // ✅ NEW: If status is "declined", also set declineReason
+      // NEW: If status is "declined", also set declineReason
       if (status === "declined" && declineReason) {
         updateDoc.declineReason = declineReason;
       }
@@ -205,7 +246,7 @@ async function run() {
     app.get("/articles/approved", async (req, res) => {
       const search = req.query.search || "";
       const publisher = req.query.publisher || "";
-      console.log("ti", publisher);
+
       // const tag = req.query.tag || "";
       const tags = req.query.tags ? req.query.tags.split(",") : [];
 
@@ -231,7 +272,7 @@ async function run() {
     //   res.send(result);
     // });
 
-    app.get("/articles", verifyFBToken, async (req, res) => {
+    app.get("/articles", async (req, res) => {
       try {
         const page = parseInt(req.query.page) || 0;
         const limit = parseInt(req.query.limit) || 10;
@@ -330,7 +371,7 @@ async function run() {
     //get article details page single data
     app.get("/articles/:id", async (req, res) => {
       const id = req?.params?.id;
-      console.log("object,id", id);
+
       const article = await articleCollections.findOne({
         _id: new ObjectId(id),
       });
@@ -341,6 +382,7 @@ async function run() {
     app.patch("/articles/:id", async (req, res) => {
       try {
         const id = req.params.id;
+        console.log("this is form 2nd view api", id);
         const result = await articleCollections.updateOne(
           { _id: new ObjectId(id) },
           { $inc: { views: 1 } }
@@ -588,7 +630,6 @@ async function run() {
       try {
         const amount = req.body?.amountInCents; // amount in cents from frontend
 
-        console.log("this is", amount);
         if (!amount || amount <= 0) {
           return res.status(400).json({ error: "Invalid amount" });
         }
