@@ -38,6 +38,7 @@ async function run() {
     const articleCollections = db.collection("Articles");
     const usersCollection = db.collection("users");
     const publishersCollection = db.collection("Publishers");
+    const paymentCollection = db.collection("payments");
     //DB AND COLLECTION ENDS
     //CUSTOM MIDDLEWARES STARTS
     const verifyFBToken = async (req, res, next) => {
@@ -193,6 +194,7 @@ async function run() {
     app.get("/articles/approved", async (req, res) => {
       const search = req.query.search || "";
       const publisher = req.query.publisher || "";
+      console.log("ti", publisher);
       // const tag = req.query.tag || "";
       const tags = req.query.tags ? req.query.tags.split(",") : [];
 
@@ -446,6 +448,29 @@ async function run() {
       }
     });
 
+    //GET USER ROLE API START
+    // GET: Get user role by email
+    app.get("/users/:email/role", async (req, res) => {
+      try {
+        const email = req.params.email;
+
+        if (!email) {
+          return res.status(400).send({ message: "Email is required" });
+        }
+
+        const user = await usersCollection.findOne({ email });
+
+        if (!user) {
+          return res.status(404).send({ message: "User not found" });
+        }
+
+        res.send({ role: user.role || "user" });
+      } catch (error) {
+        console.error("Error getting user role:", error);
+        res.status(500).send({ message: "Failed to get role" });
+      }
+    });
+    //GET USER ROLE API ENDS
     //updating user INFO IN THE DB FROM UPDATE PROFILE PAGE
     app.patch("/users", async (req, res) => {
       try {
@@ -571,7 +596,20 @@ async function run() {
         res.status(500).json({ error: "Failed to create payment intent" });
       }
     });
+    //SAVING PAYMENT DATA TO THE DB
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
 
+      try {
+        const result = await paymentCollection.insertOne(payment);
+        res.send({ success: true, insertedId: result.insertedId });
+      } catch (err) {
+        console.error("Payment save error:", err);
+        res
+          .status(500)
+          .send({ success: false, message: "Payment save failed" });
+      }
+    });
     //PAYMENT REALTED API ENDS HERE
 
     // Send a ping to confirm a successful connection
