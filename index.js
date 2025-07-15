@@ -69,6 +69,17 @@ async function run() {
         return res.status(403).send({ message: "forbidden access" });
       }
     };
+ 
+    //admin check middleware
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+      if (!user || user.role !== "admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
     //CUSTOM MIDDLEWARES ENDS
     //article(submitted by user) related api starts (PRIVATE_API)
     app.post("/articles", verifyFBToken, async (req, res) => {
