@@ -1,3 +1,5 @@
 node_modules
 .env
 assignment-12-firebase-admin-key.json
+convertKey.js
+.vercel

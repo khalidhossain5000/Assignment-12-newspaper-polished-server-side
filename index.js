@@ -12,7 +12,14 @@ const stripe = require("stripe")(process.env.STRIPE_KEY);
 app.use(cors());
 app.use(express.json());
 
-const serviceAccount = require("./assignment-12-firebase-admin-key.json");
+
+const decodedKey=Buffer.from(process.env.FB_SERVICE_KEY,'base64').toString('utf8')
+
+const serviceAccount = JSON.parse(decodedKey)
+
+// console.log("this is fidbase Converted key",decodedKey,"serviceAccount",serviceAccount);
+
+// const serviceAccount = require("./assignment-12-firebase-admin-key.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -42,12 +49,13 @@ async function run() {
     //DB AND COLLECTION ENDS
     //CUSTOM MIDDLEWARES STARTS
     const verifyFBToken = async (req, res, next) => {
+      console.log("🚀 verifyFBToken middleware started");
       const authHeader = req.headers.authorization;
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return res.status(401).send({ message: "unauthorized access" });
       }
       const token = authHeader.split(" ")[1];
-
+console.log("DFB TOKEN",token,"authHeader",authHeader);
       if (!token)
         return res.status(401).send({ message: "unauthorized access" });
       //VERIFY TOKEN STARTS
@@ -55,6 +63,7 @@ async function run() {
         const decoded = await admin.auth().verifyIdToken(token);
         // req.decoded = decoded;
         req.user = decoded; // ✅ এইটা করলে তোমার API-র কোড ঠিকমতো কাজ করবে
+        console.log("req.userFROM RQUESTSS",req.user);
         // Now check premium expiry
         const user = await usersCollection.findOne({ email: decoded.email });
         if (user?.premiumInfo && new Date(user.premiumInfo) < new Date()) {
@@ -67,15 +76,16 @@ async function run() {
 
         next();
       } catch (error) {
+        console.log("❌ Token verify failed:", error.message);
         return res.status(403).send({ message: "forbidden access" });
       }
     };
-
+console.log("test here");
     //admin check middleware
     const verifyAdmin = async (req, res, next) => {
       // const email = req.decoded.email;
       const email = req.user?.email; // ✅ ঠিক source থেকে নিচ্ছো
-      console.log(email);
+      console.log("inside admin",email);
       const query = { email };
       const user = await usersCollection.findOne(query);
       if (!user || user.role !== "admin") {
@@ -111,8 +121,9 @@ async function run() {
         // Step 3: If not premium, check if already posted
         if (!isPremium) {
           const existing = await articleCollections.findOne({
-            email: userEmail,
+            authorEmail: userEmail,
           });
+          console.log("THIS IS IS",existing);
           if (existing) {
             return res
               .status(403)
@@ -422,7 +433,7 @@ async function run() {
     //article(submitted by user) related api ends
 
     //USER RELATED API STARTS HERE
-    app.post("/users",verifyFBToken,verifyAdmin, async (req, res) => {
+    app.post("/users", async (req, res) => {
       const email = req.body.email;
       const userExist = await usersCollection.findOne({ email });
       if (userExist) {
