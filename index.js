@@ -10,11 +10,11 @@ const stripe = require("stripe")(process.env.STRIPE_KEY);
 
 // Middleware
 // app.use(cors());
-app.use(cors());
-// app.use(cors({
-//   origin:['https://assingnment-12-newspaper-web-app-full.netlify.app'],
-//   credentials:true
-// }))
+// app.use(cors());
+app.use(cors({
+  origin:['https://assignment-12-newspaper-full-web-app.netlify.app'],
+  credentials:true
+}))
 app.use(express.json());
 
 
@@ -709,7 +709,7 @@ console.log("test here");
     //PAYMENT REALTED API ENDS HERE
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
@@ -729,3 +729,5 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
 });
+
+
