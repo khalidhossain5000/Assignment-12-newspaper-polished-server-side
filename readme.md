@@ -15,9 +15,9 @@ With a focus on delivering categorized news enriched by tags and publisher detai
 
  ## Admin Login Info :
 
- E-mail:
+ E-mail: newspaper@admin.com
 
- PassWord:
+ PassWord:123456
 
 
 ## Features
