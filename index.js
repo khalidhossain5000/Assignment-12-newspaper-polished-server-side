@@ -9,7 +9,12 @@ const port = process.env.PORT || 3000;
 const stripe = require("stripe")(process.env.STRIPE_KEY);
 
 // Middleware
+// app.use(cors());
 app.use(cors());
+// app.use(cors({
+//   origin:['https://assingnment-12-newspaper-web-app-full.netlify.app'],
+//   credentials:true
+// }))
 app.use(express.json());
 
 
@@ -25,6 +30,11 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
+
+
+
+
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.r4vhlna.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -39,7 +49,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     //DB AND COLLECTION STARTS
     const db = client.db("Assignment_12_DB");
     const articleCollections = db.collection("Articles");
@@ -285,7 +295,7 @@ console.log("test here");
     //   const result = await articleCollections.find().toArray();
     //   res.send(result);
     // });
-
+// admin page articles get api
     app.get("/articles",verifyFBToken,verifyAdmin, async (req, res) => {
       try {
         const page = parseInt(req.query.page) || 0;
@@ -308,7 +318,7 @@ console.log("test here");
 
     //GET PREMIUM ARTICLE
 
-    app.get("/articles/premium", verifyFBToken, async (req, res) => {
+    app.get("/articles/premium", async (req, res) => {
       try {
         // Step 1: Query to filter only premium articles
         const query = { isPremium: true, status: "approved" }; // শুধুমাত্র approved এবং premium
@@ -339,21 +349,6 @@ console.log("test here");
       }
     });
 
-    //GET EXLUSIVE ARTICLES
-    // GET /articles/exclusive
-    // app.get("/articles/exclusive", async (req, res) => {
-    //   try {
-    //     const exclusiveArticles = await articleCollections
-    //       .find({ isExclusive: true })
-    //       .sort({ createdAt: 1 }) // newest first (optional)
-    //       .limit(10) // show top 10 only
-    //       .toArray();
-
-    //     res.send(exclusiveArticles);
-    //   } catch (error) {
-    //     res.status(500).send({ error: "Failed to fetch exclusive articles" });
-    //   }
-    // });
     //public api
     app.get("/articles/exclusive", async (req, res) => {
       try {
@@ -516,6 +511,10 @@ console.log("test here");
       }
     });
 
+
+
+
+    
     //GET USER ROLE API START
     // GET: Get user role by email
     app.get("/users/:email/role", async (req, res) => {
@@ -602,6 +601,18 @@ console.log("test here");
       res.send(result);
     });
     //USER RELATED API ENDS HERE
+
+
+
+
+
+
+
+
+
+
+
+
     // ------------------------------------------------------  //
     //PUBLISHER RALTED API STARTS
     app.post("/publishers",verifyFBToken,verifyAdmin, async (req, res) => {
@@ -640,6 +651,24 @@ console.log("test here");
 
     //OUBLISHER RALTED API ENDS
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     //PAYMENT REALTED API START HERE
     app.post("/create-payment-intent",verifyFBToken, async (req, res) => {
       try {
@@ -664,7 +693,7 @@ console.log("test here");
       }
     });
     //SAVING PAYMENT DATA TO THE DB
-    app.post("/payments",verifyFBToken, async (req, res) => {
+    app.post("/payments", async (req, res) => {
       const payment = req.body;
 
       try {
@@ -696,7 +725,7 @@ app.get("/", (req, res) => {
   res.send("NewsPaper Server is running");
 });
 
-// Start the server
+// // Start the server
 app.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
 });
