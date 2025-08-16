@@ -11,16 +11,23 @@ const stripe = require("stripe")(process.env.STRIPE_KEY);
 // Middleware
 // app.use(cors());
 // app.use(cors());
-app.use(cors({
-  origin:['https://assignment-12-newspaper-full-web-app.netlify.app'],
-  credentials:true
-}))
+app.use(
+  cors({
+    origin: [
+      "https://assignment-12-newspaper-full-web-app.netlify.app",
+      "http://localhost:5173",
+      "http://192.168.0.102:5173",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
+const decodedKey = Buffer.from(process.env.FB_SERVICE_KEY, "base64").toString(
+  "utf8"
+);
 
-const decodedKey=Buffer.from(process.env.FB_SERVICE_KEY,'base64').toString('utf8')
-
-const serviceAccount = JSON.parse(decodedKey)
+const serviceAccount = JSON.parse(decodedKey);
 
 // console.log("this is fidbase Converted key",decodedKey,"serviceAccount",serviceAccount);
 
@@ -29,11 +36,6 @@ const serviceAccount = JSON.parse(decodedKey)
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
-
-
-
-
-
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.r4vhlna.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -65,7 +67,7 @@ async function run() {
         return res.status(401).send({ message: "unauthorized access" });
       }
       const token = authHeader.split(" ")[1];
-console.log("DFB TOKEN",token,"authHeader",authHeader);
+      console.log("DFB TOKEN", token, "authHeader", authHeader);
       if (!token)
         return res.status(401).send({ message: "unauthorized access" });
       //VERIFY TOKEN STARTS
@@ -73,7 +75,7 @@ console.log("DFB TOKEN",token,"authHeader",authHeader);
         const decoded = await admin.auth().verifyIdToken(token);
         // req.decoded = decoded;
         req.user = decoded; // ✅ এইটা করলে তোমার API-র কোড ঠিকমতো কাজ করবে
-        console.log("req.userFROM RQUESTSS",req.user);
+        console.log("req.userFROM RQUESTSS", req.user);
         // Now check premium expiry
         const user = await usersCollection.findOne({ email: decoded.email });
         if (user?.premiumInfo && new Date(user.premiumInfo) < new Date()) {
@@ -90,12 +92,12 @@ console.log("DFB TOKEN",token,"authHeader",authHeader);
         return res.status(403).send({ message: "forbidden access" });
       }
     };
-console.log("test here");
+    console.log("test here");
     //admin check middleware
     const verifyAdmin = async (req, res, next) => {
       // const email = req.decoded.email;
       const email = req.user?.email; // ✅ ঠিক source থেকে নিচ্ছো
-      console.log("inside admin",email);
+      console.log("inside admin", email);
       const query = { email };
       const user = await usersCollection.findOne(query);
       if (!user || user.role !== "admin") {
@@ -117,7 +119,7 @@ console.log("test here");
     app.post("/articles", verifyFBToken, async (req, res) => {
       try {
         const userEmail = req.user.email;
-        console.log("cheking user email in articles",userEmail);
+        console.log("cheking user email in articles", userEmail);
         // Step 1: Find user in DB
         const user = await usersCollection.findOne({ email: userEmail });
         if (!user) {
@@ -133,7 +135,7 @@ console.log("test here");
           const existing = await articleCollections.findOne({
             authorEmail: userEmail,
           });
-          console.log("THIS IS IS",existing);
+          console.log("THIS IS IS", existing);
           if (existing) {
             return res
               .status(403)
@@ -154,7 +156,7 @@ console.log("test here");
     //ADD ARTICLE NORMAL AND PREMIUM VALIDATION IS ADDED ENDS
 
     //ARTICLE VIEW COUNT-->
-    app.patch("/articles/view/:id",verifyFBToken, async (req, res) => {
+    app.patch("/articles/view/:id", verifyFBToken, async (req, res) => {
       try {
         const id = req.params.id;
         const result = await articleCollections.updateOne(
@@ -169,7 +171,7 @@ console.log("test here");
       }
     });
     //UPDATING STATUS API VIA ADMIN ACTIONS BUTTON
-    app.patch("/articles/:id",verifyFBToken,verifyAdmin, async (req, res) => {
+    app.patch("/articles/:id", verifyFBToken, verifyAdmin, async (req, res) => {
       const articleId = req.params.id;
 
       // NEW: Accepting declineReason from frontend
@@ -197,7 +199,7 @@ console.log("test here");
       res.send(result);
     });
     //update my article api start here
-    app.patch("/articles/update/:id",verifyFBToken, async (req, res) => {
+    app.patch("/articles/update/:id", verifyFBToken, async (req, res) => {
       try {
         const articleId = req.params.id;
         const updateData = req.body;
@@ -224,29 +226,34 @@ console.log("test here");
 
     //update my article api ends here
     //PUBLISHER ARTICLE COUNT API
-    app.get("/publisher-article-count",verifyFBToken,verifyAdmin, async (req, res) => {
-      try {
-        const result = await articleCollections
-          .aggregate([
-            {
-              $group: {
-                _id: "$publisher.label", // 🔥 Group by label for readable pie chart
-                count: { $sum: 1 },
+    app.get(
+      "/publisher-article-count",
+      verifyFBToken,
+      verifyAdmin,
+      async (req, res) => {
+        try {
+          const result = await articleCollections
+            .aggregate([
+              {
+                $group: {
+                  _id: "$publisher.label", // 🔥 Group by label for readable pie chart
+                  count: { $sum: 1 },
+                },
               },
-            },
-          ])
-          .toArray();
+            ])
+            .toArray();
 
-        res.send(result); // Example: [ { _id: "Business", count: 5 }, ... ]
-      } catch (err) {
-        console.error(err);
-        res.status(500).send({ error: "Server error" });
+          res.send(result); // Example: [ { _id: "Business", count: 5 }, ... ]
+        } catch (err) {
+          console.error(err);
+          res.status(500).send({ error: "Server error" });
+        }
       }
-    });
+    );
 
     // GET /api/articles?email=test@admin.com
 
-    app.get("/articles/my-articles",verifyFBToken, async (req, res) => {
+    app.get("/articles/my-articles", verifyFBToken, async (req, res) => {
       try {
         const email = req.query.email;
         if (!email) {
@@ -295,8 +302,8 @@ console.log("test here");
     //   const result = await articleCollections.find().toArray();
     //   res.send(result);
     // });
-// admin page articles get api
-    app.get("/articles",verifyFBToken,verifyAdmin, async (req, res) => {
+    // admin page articles get api
+    app.get("/articles", verifyFBToken, verifyAdmin, async (req, res) => {
       try {
         const page = parseInt(req.query.page) || 0;
         const limit = parseInt(req.query.limit) || 10;
@@ -379,7 +386,7 @@ console.log("test here");
       }
     });
     //get article details page single data
-    app.get("/articles/:id",verifyFBToken, async (req, res) => {
+    app.get("/articles/:id", verifyFBToken, async (req, res) => {
       const id = req?.params?.id;
 
       const article = await articleCollections.findOne({
@@ -405,19 +412,24 @@ console.log("test here");
     //   }
     // });
     // Make article premium
-    app.patch("/articles/:id/premium",verifyFBToken,verifyAdmin, async (req, res) => {
-      const articleId = req.params.id;
+    app.patch(
+      "/articles/:id/premium",
+      verifyFBToken,
+      verifyAdmin,
+      async (req, res) => {
+        const articleId = req.params.id;
 
-      const result = await articleCollections.updateOne(
-        { _id: new ObjectId(articleId) },
-        { $set: { isPremium: true } }
-      );
+        const result = await articleCollections.updateOne(
+          { _id: new ObjectId(articleId) },
+          { $set: { isPremium: true } }
+        );
 
-      res.send(result);
-    });
+        res.send(result);
+      }
+    );
 
     //ARTICEL DELTE API
-    app.delete("/articles/:id",verifyFBToken, async (req, res) => {
+    app.delete("/articles/:id", verifyFBToken, async (req, res) => {
       const id = req.params.id;
       const result = await articleCollections.deleteOne({
         _id: new ObjectId(id),
@@ -470,7 +482,7 @@ console.log("test here");
     //   res.send(result);
     // });
     // GET USERS DATA WITH PAGINATION ADDED
-    app.get("/users",verifyFBToken,verifyAdmin, async (req, res) => {
+    app.get("/users", verifyFBToken, verifyAdmin, async (req, res) => {
       try {
         const page = parseInt(req.query.page) || 0; // 0-indexed page
         const limit = parseInt(req.query.limit) || 10; // limit per page
@@ -492,7 +504,7 @@ console.log("test here");
     });
 
     // GET USERS DATA WITH PAGINATION ADDED ENDS
-    app.get("/user",verifyFBToken, async (req, res) => {
+    app.get("/user", verifyFBToken, async (req, res) => {
       const email = req.query.email; // ইউজারের ইমেইল ইউআরএল থেকে নেবে, যেমন /api/user?email=test@example.com
 
       if (!email) {
@@ -511,10 +523,6 @@ console.log("test here");
       }
     });
 
-
-
-
-    
     //GET USER ROLE API START
     // GET: Get user role by email
     app.get("/users/:email/role", async (req, res) => {
@@ -539,7 +547,7 @@ console.log("test here");
     });
     //GET USER ROLE API ENDS
     //updating user INFO IN THE DB FROM UPDATE PROFILE PAGE
-    app.patch("/users",verifyFBToken, async (req, res) => {
+    app.patch("/users", verifyFBToken, async (req, res) => {
       try {
         const email = req.query.email; // query থেকে email নেওয়া
         const { name, profilePic } = req.body;
@@ -568,27 +576,32 @@ console.log("test here");
 
     //APPROVE ADMIN / UPDATE USER ROLE API
 
-    app.patch("/users/admin/:id",verifyFBToken,verifyAdmin, async (req, res) => {
-      const id = req.params.id;
+    app.patch(
+      "/users/admin/:id",
+      verifyFBToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
 
-      const filter = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          role: "admin",
-        },
-      };
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            role: "admin",
+          },
+        };
 
-      try {
-        const result = await usersCollection.updateOne(filter, updateDoc);
-        res.send(result);
-      } catch (error) {
-        console.error("Error updating user:", error);
-        res.status(500).send({ message: "Server error while updating user" });
+        try {
+          const result = await usersCollection.updateOne(filter, updateDoc);
+          res.send(result);
+        } catch (error) {
+          console.error("Error updating user:", error);
+          res.status(500).send({ message: "Server error while updating user" });
+        }
       }
-    });
+    );
 
     //premium field update api
-    app.patch("/users/:email",verifyFBToken, async (req, res) => {
+    app.patch("/users/:email", verifyFBToken, async (req, res) => {
       const email = req.params.email;
       const { premiumInfo } = req.body;
 
@@ -602,20 +615,9 @@ console.log("test here");
     });
     //USER RELATED API ENDS HERE
 
-
-
-
-
-
-
-
-
-
-
-
     // ------------------------------------------------------  //
     //PUBLISHER RALTED API STARTS
-    app.post("/publishers",verifyFBToken,verifyAdmin, async (req, res) => {
+    app.post("/publishers", verifyFBToken, verifyAdmin, async (req, res) => {
       try {
         const { publisherName, publisherPic } = req.body;
 
@@ -651,26 +653,8 @@ console.log("test here");
 
     //OUBLISHER RALTED API ENDS
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     //PAYMENT REALTED API START HERE
-    app.post("/create-payment-intent",verifyFBToken, async (req, res) => {
+    app.post("/create-payment-intent", verifyFBToken, async (req, res) => {
       try {
         const amount = req.body?.amountInCents; // amount in cents from frontend
 
@@ -707,9 +691,31 @@ console.log("test here");
       }
     });
     //PAYMENT REALTED API ENDS HERE
+    // EXTRA SECTION START---
+
+    //NEW-YORK-TIME PUBLISHER POST GET API START
+ app.get("/nyt-articles", async (req, res) => {
+  try {
+ 
+
+    // Fetch all articles with publisher.label = "The New York Times"
+    const nytArticles = await articleCollections
+      .find({ "publisher.label": "The New York Times" }) // exact match
+      .sort({ createdAt: -1 }) // newest first
+      .toArray();
+
+    res.status(200).json(nytArticles); // return articles
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+
+    //NEW-YORK-TIME PUBLISHER POST GET API ENDS
 
     // Send a ping to confirm a successful connection
-    
+
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
@@ -729,5 +735,3 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
 });
-
-
