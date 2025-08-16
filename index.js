@@ -694,23 +694,21 @@ async function run() {
     // EXTRA SECTION START---
 
     //NEW-YORK-TIME PUBLISHER POST GET API START
- app.get("/nyt-articles", async (req, res) => {
-  try {
- 
+    app.get("/nyt-articles", async (req, res) => {
+      try {
+        // Fetch all articles with publisher.label = "The New York Times"
+        const nytArticles = await articleCollections
+          .find({ "publisher.label": "The New York Times" }) // exact match
+          .sort({ createdAt: -1 }) // newest first
+          .limit(4)
+          .toArray();
 
-    // Fetch all articles with publisher.label = "The New York Times"
-    const nytArticles = await articleCollections
-      .find({ "publisher.label": "The New York Times" }) // exact match
-      .sort({ createdAt: -1 }) // newest first
-      .toArray();
-
-    res.status(200).json(nytArticles); // return articles
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server Error" });
-  }
-});
-
+        res.status(200).json(nytArticles); // return articles
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server Error" });
+      }
+    });
 
     //NEW-YORK-TIME PUBLISHER POST GET API ENDS
 
