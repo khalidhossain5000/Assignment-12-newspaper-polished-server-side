@@ -735,6 +735,23 @@ async function run() {
       }
     });
 
+
+
+    // GET /api/articles?publisherId=xxx
+app.get("/api/articles", async (req, res) => {
+  try {
+    const { publisherId } = req.query;
+    console.log("pubId",publisherId);
+    const filter = { status: "approved" };
+    if (publisherId) filter["publisher.value"] = publisherId;
+
+    const articles = await db.collection("Articles").find(filter).toArray();
+    res.json(articles);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
     // Send a ping to confirm a successful connection
 
     console.log(
