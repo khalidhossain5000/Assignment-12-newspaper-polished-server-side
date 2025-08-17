@@ -105,15 +105,7 @@ async function run() {
       }
       next();
     };
-    //CUSTOM MIDDLEWARES ENDS
-
-    // article(submitted by user) related api starts (PRIVATE_API)
-
-    // app.post("/articles", verifyFBToken, async (req, res) => {
-    //   const articles = req.body;
-    //   const result = await articleCollections.insertOne(articles);
-    //   res.send(result);
-    // });
+    
 
     //ADD ARTICLE NORMAL AND PREMIUM VALIDATION IS ADDED
     app.post("/articles", verifyFBToken, async (req, res) => {
@@ -711,6 +703,37 @@ async function run() {
     });
 
     //NEW-YORK-TIME PUBLISHER POST GET API ENDS
+    
+// GET /api/publishers-with-count
+app.get("/api/publishers-with-count", async (req, res) => {
+  try {
+    // 1. সব publishers আনা
+    const publishers = await db.collection("Publishers").find({}).toArray();
+
+    // 2. aggregation দিয়ে article count বের করা
+    const counts = await db.collection("Articles").aggregate([
+      { $match: { status: "approved" } },
+      { $group: { _id: "$publisher.value", count: { $sum: 1 } } }
+    ]).toArray();
+
+    // 3. Publishers সাথে count merge করা
+    const publishersWithCount = publishers.map(pub => {
+      const articleObj = counts.find(c => c._id.toString() === pub._id.toString());
+      return {
+        _id: pub._id,
+        publisherName: pub.publisherName,
+        publisherPic: pub.publisherPic,
+        articleCount: articleObj ? articleObj.count : 0
+      };
+    });
+
+    res.json(publishersWithCount);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
     // Send a ping to confirm a successful connection
 
