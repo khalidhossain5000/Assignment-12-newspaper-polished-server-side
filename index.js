@@ -735,7 +735,7 @@ async function run() {
       }
     });
 
-    // GET /api/articles for publisher post count
+    // api/articles for publisher post count
     app.get("/api/articles", async (req, res) => {
       try {
         const { publisherId } = req.query;
