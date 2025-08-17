@@ -14,7 +14,7 @@ const stripe = require("stripe")(process.env.STRIPE_KEY);
 app.use(
   cors({
     origin: [
-      "https://assignment-12-newspaper-full-web-app.netlify.app",
+      "https://the-voice-daily-newspaper-polished.netlify.app",
       "http://localhost:5173",
       "http://192.168.0.102:5173",
     ],
