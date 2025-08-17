@@ -1,5 +1,5 @@
 
-# Project Title : Newspaper FullStack Website
+# Project Title : Newspaper FullStack Website With MERN Stack.
 
 # Website Name: The Voice Daily
 
@@ -12,7 +12,7 @@ With a focus on delivering categorized news enriched by tags and publisher detai
 
 
 ## 🚀🚀 Live Site :
- https://assignment-12-newspaper-full-web-app.netlify.app/allArticles
+ https://the-voice-daily-newspaper-polished.netlify.app 
 
  ## Admin Login Info :
 
