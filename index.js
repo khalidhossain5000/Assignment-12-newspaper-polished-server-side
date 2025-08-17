@@ -739,7 +739,7 @@ async function run() {
     app.get("/api/articles", async (req, res) => {
       try {
         const { publisherId } = req.query;
-        console.log("pubId", publisherId);
+        
         const filter = { status: "approved" };
         if (publisherId) filter["publisher.value"] = publisherId;
 
