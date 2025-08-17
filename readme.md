@@ -6,7 +6,7 @@
 The News Daily is a modern full-stack newspaper website designed to deliver a seamless and engaging reading experience. It combines a responsive React frontend with a powerful Node.js and MongoDB backend to handle dynamic content efficiently. The platform supports multiple user roles and ensures secure authentication while managing article submission, approval, and publication workflows.
 
 
-With a focus on delivering categorized news enriched by tags and publisher details, it offers premium content access to subscribers and robust content management tools for admin.
+With a focus on delivering categorized news enriched by tags and publisher details, it offers premium content access to subscribers and robust content management tools for admin and editor.
 
 
 
